@@ -24,6 +24,7 @@ import {
 } from './types';
 import { checkQuery } from './utils/check-query';
 import { checkQueryTracking } from './utils/check-query-tracking';
+import { checkQueryTrackingWithRelations } from './utils/check-query-tracking-with-relations';
 import { checkQueryWithRelations } from './utils/check-query-with-relations';
 import { createQueryHash } from './utils/create-query-hash';
 
@@ -193,18 +194,13 @@ export function createQueryInstance<T extends QueryParameter[]>(
         addSubscriptions: new Set<QuerySubscriber>(),
         removeSubscriptions: new Set<QuerySubscriber>(),
         relationFilters: [],
+        hasRelations: false,
 
         run: (world: World, params: QueryParameter[]) => runQuery(world, query, params),
         add: (entity: Entity) => addEntityToQuery(query, entity),
         remove: (world: World, entity: Entity) => removeEntityFromQuery(world, query, entity),
-        check: (world: World, entity: Entity) => checkQuery(world, query, entity),
-        checkTracking: (
-            world: World,
-            entity: Entity,
-            eventType: EventType,
-            generationId: number,
-            bitflag: number
-        ) => checkQueryTracking(world, query, entity, eventType, generationId, bitflag),
+        check: null!,
+        checkTracking: null!,
         resetTrackingBitmasks: (eid: number) => resetQueryTrackingBitmasks(query, eid),
     };
 
@@ -329,10 +325,21 @@ export function createQueryInstance<T extends QueryParameter[]>(
     // Add to notQueries if has forbidden traits
 	if (query.traitInstances.forbidden.length > 0) ctx.notQueries.push(query);
 
-    // Index queries with relation filters
-    const hasRelationFilters = query.relationFilters && query.relationFilters.length > 0;
+    // Pre-compute relation flag and bind check/checkTracking closures
+    const hasRelationFilters = query.relationFilters!.length > 0;
+    query.hasRelations = hasRelationFilters;
 
     if (hasRelationFilters) {
+        query.check = (world: World, entity: Entity) =>
+            checkQueryWithRelations(world, query, entity);
+        query.checkTracking = (
+            world: World,
+            entity: Entity,
+            eventType: EventType,
+            generationId: number,
+            bitflag: number
+        ) => checkQueryTrackingWithRelations(world, query, entity, eventType, generationId, bitflag);
+
         for (const pair of query.relationFilters!) {
             const relationTrait = pair[$internal].relation[$internal].trait;
             const relationTraitInstance = getTraitInstance(ctx.traitInstances, relationTrait);
@@ -340,6 +347,16 @@ export function createQueryInstance<T extends QueryParameter[]>(
 			relationTraitInstance.relationQueries.push(query);
             }
         }
+    } else {
+        query.check = (world: World, entity: Entity) =>
+            checkQuery(world, query, entity);
+        query.checkTracking = (
+            world: World,
+            entity: Entity,
+            eventType: EventType,
+            generationId: number,
+            bitflag: number
+        ) => checkQueryTracking(world, query, entity, eventType, generationId, bitflag);
     }
 
     // Populate query with initial matching entities
@@ -418,10 +435,7 @@ export function createQueryInstance<T extends QueryParameter[]>(
         const entities = ctx.entityIndex.dense;
         for (let i = 0; i < entities.length; i++) {
             const entity = entities[i];
-            const match = hasRelationFilters
-                ? checkQueryWithRelations(world, query, entity)
-                : query.check(world, entity);
-            if (match) query.add(entity);
+            if (query.check(world, entity)) query.add(entity);
         }
     }
 

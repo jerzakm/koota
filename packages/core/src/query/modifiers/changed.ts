@@ -9,7 +9,6 @@ import { universe } from '../../universe/universe';
 import type { World } from '../../world';
 import { createModifier } from '../modifier';
 import type { Modifier } from '../types';
-import { checkQueryTrackingWithRelations } from '../utils/check-query-tracking-with-relations';
 import { createTrackingId, setTrackingMasks } from '../utils/tracking-cursor';
 
 export function createChanged() {
@@ -56,18 +55,7 @@ function markChanged(world: World, entity: Entity, trait: Trait) {
         if (!query.hasChangedModifiers) continue;
         if (!query.changedTraits.has(trait)) continue;
 
-        const match =
-            query.relationFilters && query.relationFilters.length > 0
-                ? checkQueryTrackingWithRelations(
-                      world,
-                      query,
-                      entity,
-                      'change',
-                      generationId,
-                      bitflag
-                  )
-                : query.checkTracking(world, entity, 'change', generationId, bitflag);
-        if (match) query.add(entity);
+        if (query.checkTracking(world, entity, 'change', generationId, bitflag)) query.add(entity);
         else query.remove(world, entity);
     }
 

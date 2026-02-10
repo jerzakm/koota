@@ -16,18 +16,13 @@ export function checkQueryTrackingWithRelations(
     eventGenerationId: number,
     eventBitflag: number
 ): boolean {
-    // First check trait bitmasks and tracking state (fast)
     if (!checkQueryTracking(world, query, entity, eventType, eventGenerationId, eventBitflag)) {
         return false;
     }
 
-    // Then check relation pairs if any
-    if (query.relationFilters && query.relationFilters.length > 0) {
-        for (const pair of query.relationFilters) {
-            if (!hasRelationPair(world, entity, pair)) {
-                return false;
-            }
-        }
+    const filters = query.relationFilters!;
+    for (let i = 0, len = filters.length; i < len; i++) {
+        if (!hasRelationPair(world, entity, filters[i])) return false;
     }
 
     return true;

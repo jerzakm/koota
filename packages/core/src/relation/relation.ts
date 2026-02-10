@@ -1,7 +1,6 @@
 import { $internal } from '../common';
 import type { Entity } from '../entity/types';
 import { getEntityId } from '../entity/utils/pack-entity';
-import { checkQueryWithRelations } from '../query/utils/check-query-with-relations';
 import { Schema } from '../storage';
 import { hasTrait, trait } from '../trait/trait';
 import { getTraitInstance } from '../trait/trait-instance';
@@ -321,12 +320,8 @@ function updateQueriesForRelationChange(
     // All queries in relationQueries already filter by this relation
 	for (let i = 0, len = traitData.relationQueries.length; i < len; i++) {
 		const query = traitData.relationQueries[i];
-		const match = checkQueryWithRelations(world, query, entity);
-		if (match) {
-			query.add(entity);
-		} else {
-			query.remove(world, entity);
-		}
+		if (query.check(world, entity)) query.add(entity);
+		else query.remove(world, entity);
 	}
 }
 

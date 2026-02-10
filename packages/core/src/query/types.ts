@@ -165,6 +165,8 @@ export type QueryInstance<T extends QueryParameter[] = QueryParameter[]> = {
     removeSubscriptions: Set<QuerySubscriber>;
     /** Relation pairs for target-specific queries */
     relationFilters?: RelationPair[];
+    /** Pre-computed flag: true if query has relation filters */
+    hasRelations: boolean;
     run: (world: World, params: QueryParameter[]) => QueryResult<T>;
     add: (entity: Entity) => void;
     remove: (world: World, entity: Entity) => void;

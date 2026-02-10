@@ -2,8 +2,6 @@ import { $internal } from '../common';
 import type { Entity } from '../entity/types';
 import { getEntityId } from '../entity/utils/pack-entity';
 import { setChanged, setPairChanged } from '../query/modifiers/changed';
-import { checkQueryTrackingWithRelations } from '../query/utils/check-query-tracking-with-relations';
-import { checkQueryWithRelations } from '../query/utils/check-query-with-relations';
 import { getOrderedTraitRelation, isOrderedTrait, setupOrderedTraitSync } from '../relation/ordered';
 import { OrderedList } from '../relation/ordered-list';
 import {
@@ -460,37 +458,24 @@ export function getTrait(world: World, entity: Entity, trait: Trait | RelationPa
     ctx.entityMasks[generationId][eid] |= bitflag;
     instance.entityBitSet.add(eid);
 
-    // Set the entity as dirty
-    for (const dirtyMask of ctx.dirtyMasks.values()) {
-        if (!dirtyMask[generationId]) dirtyMask[generationId] = [];
-        dirtyMask[generationId][eid] |= bitflag;
+    if (ctx.dirtyMasks.size > 0) {
+        for (const dirtyMask of ctx.dirtyMasks.values()) {
+            if (!dirtyMask[generationId]) dirtyMask[generationId] = [];
+            dirtyMask[generationId][eid] |= bitflag;
+        }
     }
 
-	// Update non-tracking queries (no event data needed)
-	// PERF: Use indexed loop instead of for...of to avoid iterator overhead
 	for (let qi = 0, qLen = queries.length; qi < qLen; qi++) {
 		const query = queries[qi];
 		query.toRemove.remove(entity);
-		// Use checkQueryWithRelations if query has relation filters, otherwise use checkQuery
-		const match =
-			query.relationFilters && query.relationFilters.length > 0
-				? checkQueryWithRelations(world, query, entity)
-				: query.check(world, entity);
-		if (match) query.add(entity);
+		if (query.check(world, entity)) query.add(entity);
 		else query.remove(world, entity);
 	}
 
-	// Update tracking queries (with event data)
-	// PERF: Use indexed loop instead of for...of to avoid iterator overhead
 	for (let qi = 0, qLen = trackingQueries.length; qi < qLen; qi++) {
 		const query = trackingQueries[qi];
 		query.toRemove.remove(entity);
-		// Use checkQueryTrackingWithRelations if query has relation filters, otherwise use checkQueryTracking
-		const match =
-			query.relationFilters && query.relationFilters.length > 0
-				? checkQueryTrackingWithRelations(world, query, entity, 'add', generationId, bitflag)
-				: query.checkTracking(world, entity, 'add', generationId, bitflag);
-		if (match) query.add(entity);
+		if (query.checkTracking(world, entity, 'add', generationId, bitflag)) query.add(entity);
 		else query.remove(world, entity);
 	}
 
@@ -521,40 +506,23 @@ function removeTraitFromEntity(world: World, entity: Entity, trait: Trait): void
     ctx.entityMasks[generationId][eid] &= ~bitflag;
     instance.entityBitSet.remove(eid);
 
-    // Set the entity as dirty
-    for (const dirtyMask of ctx.dirtyMasks.values()) {
-        dirtyMask[generationId][eid] |= bitflag;
+    if (ctx.dirtyMasks.size > 0) {
+        for (const dirtyMask of ctx.dirtyMasks.values()) {
+            dirtyMask[generationId][eid] |= bitflag;
+        }
     }
 
-	// Update non-tracking queries
 	for (let qi = 0, qLen = queries.length; qi < qLen; qi++) {
 		const query = queries[qi];
-		const match =
-			query.relationFilters && query.relationFilters.length > 0
-				? checkQueryWithRelations(world, query, entity)
-				: query.check(world, entity);
-		if (match) query.add(entity);
+		if (query.check(world, entity)) query.add(entity);
 		else query.remove(world, entity);
 	}
 
-	// Update tracking queries (with event data)
 	for (let qi = 0, qLen = trackingQueries.length; qi < qLen; qi++) {
 		const query = trackingQueries[qi];
-		const match =
-			query.relationFilters && query.relationFilters.length > 0
-				? checkQueryTrackingWithRelations(
-						world,
-						query,
-						entity,
-						'remove',
-						generationId,
-						bitflag
-					)
-				: query.checkTracking(world, entity, 'remove', generationId, bitflag);
-		if (match) query.add(entity);
+		if (query.checkTracking(world, entity, 'remove', generationId, bitflag)) query.add(entity);
 		else query.remove(world, entity);
 	}
 
-    // Remove trait from entity internally
     ctx.entityTraits.get(entity)!.delete(trait);
 }
