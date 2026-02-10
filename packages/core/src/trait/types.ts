@@ -3,7 +3,7 @@ import type { Entity } from '../entity/types';
 import type { QueryInstance } from '../query/types';
 import type { Relation, RelationPair } from '../relation/types';
 import type { AoSFactory, Schema, Store, StoreType } from '../storage';
-import type { BitSet } from '../utils/bit-set';
+
 
 // Backwards-compatible alias (the trait "type" is the storage layout).
 export type TraitType = StoreType;
@@ -93,7 +93,6 @@ export interface TraitInstance<T extends Trait = Trait, S extends Schema = Extra
 	notQueries: QueryInstance[];
 	relationQueries: QueryInstance[];
     schema: S;
-    entityBitSet: BitSet;
     changeSubscriptions: Set<(entity: Entity, target?: Entity) => void>;
     addSubscriptions: Set<(entity: Entity, target?: Entity) => void>;
     removeSubscriptions: Set<(entity: Entity, target?: Entity) => void>;

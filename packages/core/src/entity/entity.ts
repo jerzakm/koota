@@ -51,44 +51,42 @@ export function destroyEntity(world: World, entity: Entity) {
     // autoDestroy controls cascade behavior:
     // - 'source' (or 'orphan'): when target dies, destroy sources (e.g., parent dies → children die)
     // - 'target': when source dies, destroy targets (e.g., container dies → items die)
+    const relationsArr = Array.from(ctx.relations);
+    const relationsLen = relationsArr.length;
+
     while (entityQueue.length > 0) {
         const currentEntity = entityQueue.pop()!;
         if (processedEntities.has(currentEntity)) continue;
 
         processedEntities.add(currentEntity);
 
-        for (const relation of ctx.relations) {
+        for (let ri = 0; ri < relationsLen; ri++) {
+            const relation = relationsArr[ri];
             const relationCtx = relation[$internal];
 
-            // Handle entities that have relations pointing TO currentEntity (currentEntity is target)
-            // If autoDestroy is 'orphan', destroy those sources
             const sources = getEntitiesWithRelationTo(world, relation, currentEntity);
-            for (const source of sources) {
+            for (let si = 0; si < sources.length; si++) {
+                const source = sources[si];
                 if (!world.has(source)) continue;
-
-                // Remove the relation from source to currentEntity
                 cleanupRelationTarget(world, relation, source, currentEntity);
-
-                // If autoDestroy: 'source', queue the source for destruction
                 if (relationCtx.autoDestroy === 'source') entityQueue.push(source);
             }
 
-            // Handle relations where currentEntity is the source pointing to targets
-            // If autoDestroy is 'target', destroy those targets
             if (relationCtx.autoDestroy === 'target') {
                 const targets = getRelationTargets(world, relation, currentEntity);
-                for (const target of targets) {
+                for (let ti = 0; ti < targets.length; ti++) {
+                    const target = targets[ti];
                     if (!world.has(target)) continue;
                     if (!processedEntities.has(target)) entityQueue.push(target);
                 }
             }
         }
 
-        // Remove all traits of the current entity.
         const entityTraits = ctx.entityTraits.get(currentEntity);
         if (entityTraits) {
-            for (const trait of entityTraits) {
-                removeTrait(world, currentEntity, trait);
+            const traitsArr = Array.from(entityTraits);
+            for (let ti = 0; ti < traitsArr.length; ti++) {
+                removeTrait(world, currentEntity, traitsArr[ti]);
             }
         }
 

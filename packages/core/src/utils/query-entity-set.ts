@@ -96,6 +96,16 @@ export class QueryEntitySet {
 		return this._cursor;
 	}
 
+	forEachThenClear(fn: (entity: Entity) => void): void {
+		for (let i = this._cursor - 1; i >= 0; i--) {
+			const entity = this._dense[i];
+			const eid = getEntityId(entity);
+			this.bottom[eid >>> 5] = 0;
+			fn(entity);
+		}
+		this._cursor = 0;
+	}
+
 	private grow(minCapacity: number): void {
 		let newCapacity = this.capacity;
 		while (newCapacity < minCapacity) {

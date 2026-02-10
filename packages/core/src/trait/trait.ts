@@ -31,7 +31,6 @@ import {
     validateSchema,
 } from '../storage';
 import type { World } from '../world';
-import { BitSet } from '../utils/bit-set';
 import { ensureEntityMaskSize } from '../world/utils/ensure-entity-mask-size';
 import { incrementWorldBitflag } from '../world/utils/increment-world-bit-flag';
 import { getTraitInstance, hasTraitInstance, setTraitInstance } from './trait-instance';
@@ -105,7 +104,6 @@ export function registerTrait(world: World, trait: Trait) {
 		notQueries: [],
 		relationQueries: [],
         schema: trait.schema,
-        entityBitSet: new BitSet(),
         changeSubscriptions: new Set(),
         addSubscriptions: new Set(),
         removeSubscriptions: new Set(),
@@ -456,7 +454,6 @@ export function getTrait(world: World, entity: Entity, trait: Trait | RelationPa
     const eid = getEntityId(entity);
     ensureEntityMaskSize(ctx.entityMasks, generationId, eid);
     ctx.entityMasks[generationId][eid] |= bitflag;
-    instance.entityBitSet.add(eid);
 
     if (ctx.dirtyMasks.size > 0) {
         for (const dirtyMask of ctx.dirtyMasks.values()) {
@@ -504,7 +501,6 @@ function removeTraitFromEntity(world: World, entity: Entity, trait: Trait): void
     // Remove bitflag from entity bitmask
     const eid = getEntityId(entity);
     ctx.entityMasks[generationId][eid] &= ~bitflag;
-    instance.entityBitSet.remove(eid);
 
     if (ctx.dirtyMasks.size > 0) {
         for (const dirtyMask of ctx.dirtyMasks.values()) {

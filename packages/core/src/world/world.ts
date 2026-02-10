@@ -252,9 +252,12 @@ export function createWorld(
                 }
             }
 
-            query.addSubscriptions.add(callback);
+            query.addSubscriptions.push(callback);
 
-            return () => query.addSubscriptions.delete(callback);
+            return () => {
+                const idx = query.addSubscriptions.indexOf(callback);
+                if (idx !== -1) query.addSubscriptions.splice(idx, 1);
+            };
         },
 
         onQueryRemove(
@@ -287,9 +290,12 @@ export function createWorld(
                 }
             }
 
-            query.removeSubscriptions.add(callback);
+            query.removeSubscriptions.push(callback);
 
-            return () => query.removeSubscriptions.delete(callback);
+            return () => {
+                const idx = query.removeSubscriptions.indexOf(callback);
+                if (idx !== -1) query.removeSubscriptions.splice(idx, 1);
+            };
         },
 
         onAdd<T extends Trait>(

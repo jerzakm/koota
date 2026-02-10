@@ -57,9 +57,8 @@ export function addEntityToQuery(query: QueryInstance, entity: Entity) {
     query.toRemove.remove(entity);
     query.entities.add(entity);
 
-    // Notify subscriptions.
-    for (const sub of query.addSubscriptions) {
-        sub(entity);
+    for (let i = 0, len = query.addSubscriptions.length; i < len; i++) {
+        query.addSubscriptions[i](entity);
     }
 
     query.version++;
@@ -73,9 +72,8 @@ export function removeEntityFromQuery(world: World, query: QueryInstance, entity
     query.toRemove.add(entity);
     ctx.dirtyQueries.add(query);
 
-    // Notify subscriptions.
-    for (const sub of query.removeSubscriptions) {
-        sub(entity);
+    for (let i = 0, len = query.removeSubscriptions.length; i < len; i++) {
+        query.removeSubscriptions[i](entity);
     }
 
     query.version++;
@@ -86,12 +84,9 @@ export function commitQueryRemovals(world: World) {
     if (!ctx.dirtyQueries.size) return;
 
 	for (const query of ctx.dirtyQueries) {
-		const toRemoveDense = query.toRemove.dense;
-		for (let i = toRemoveDense.length - 1; i >= 0; i--) {
-			const eid = toRemoveDense[i];
-			query.toRemove.remove(eid);
-			query.entities.remove(eid);
-		}
+		query.toRemove.forEachThenClear((entity) => {
+			query.entities.remove(entity);
+		});
 	}
 
     ctx.dirtyQueries.clear();
@@ -191,8 +186,8 @@ export function createQueryInstance<T extends QueryParameter[]>(
         hasChangedModifiers: false,
         changedTraits: new Set<Trait>(),
         toRemove: new QueryEntitySet(),
-        addSubscriptions: new Set<QuerySubscriber>(),
-        removeSubscriptions: new Set<QuerySubscriber>(),
+        addSubscriptions: [],
+        removeSubscriptions: [],
         relationFilters: [],
         hasRelations: false,
 
@@ -362,15 +357,17 @@ export function createQueryInstance<T extends QueryParameter[]>(
     // Populate query with initial matching entities
     if (query.trackingGroups.length > 0) {
         // For tracking queries, check each entity against tracking groups
-        for (const group of query.trackingGroups) {
+        for (let gi = 0; gi < query.trackingGroups.length; gi++) {
+            const group = query.trackingGroups[gi];
             const { type, id, logic, bitmasks } = group;
             const snapshot = ctx.trackingSnapshots.get(id)!;
             const dirtyMask = ctx.dirtyMasks.get(id)!;
             const changedMask = ctx.changedMasks.get(id)!;
 
-            for (const entity of ctx.entityIndex.dense) {
-                // For AND groups, skip if already in query (will be checked by other groups)
-                // For OR groups, skip if already in query
+            const denseEntities = ctx.entityIndex.dense;
+            const denseLen = denseEntities.length;
+            for (let ei = 0; ei < denseLen; ei++) {
+                const entity = denseEntities[ei];
                 if (query.entities.has(entity)) continue;
 
                 const eid = getEntityId(entity);

@@ -161,8 +161,8 @@ export type QueryInstance<T extends QueryParameter[] = QueryParameter[]> = {
     hasChangedModifiers: boolean;
     changedTraits: Set<Trait>;
     toRemove: QueryEntitySet;
-    addSubscriptions: Set<QuerySubscriber>;
-    removeSubscriptions: Set<QuerySubscriber>;
+    addSubscriptions: QuerySubscriber[];
+    removeSubscriptions: QuerySubscriber[];
     /** Relation pairs for target-specific queries */
     relationFilters?: RelationPair[];
     /** Pre-computed flag: true if query has relation filters */

@@ -1,6 +1,6 @@
 import { $internal } from '../common';
 import type { Entity } from '../entity/types';
-import { getEntityId } from '../entity/utils/pack-entity';
+import { ENTITY_ID_MASK } from '../entity/utils/pack-entity';
 import { isRelationPair } from '../relation/utils/is-relation';
 import type { Relation } from '../relation/types';
 import { Store } from '../storage';
@@ -38,11 +38,7 @@ export function createQueryResult<T extends QueryParameter[]>(
 
             for (let i = 0; i < entities.length; i++) {
                 const entity = entities[i];
-                const eid = getEntityId(entity);
-
-                // Create snapshots without atomic tracking
-                createSnapshots(eid, traits, stores, state);
-
+                createSnapshots(entity & ENTITY_ID_MASK, traits, stores, state);
                 callback(state, entity, i);
             }
 
@@ -66,15 +62,13 @@ export function createQueryResult<T extends QueryParameter[]>(
 
                 for (let i = 0; i < entities.length; i++) {
                     const entity = entities[i];
-                    const eid = getEntityId(entity);
+                    const eid = entity & ENTITY_ID_MASK;
 
                     createSnapshotsWithAtomic(eid, traits, stores, state, atomicSnapshots);
                     callback(state as unknown as InstancesFromParameters<T>, entity, i);
 
-                    // Skip if the entity has been destroyed.
                     if (!world.has(entity)) continue;
 
-                    // Commit all changes back to the stores for tracked traits.
                     for (let j = 0; j < trackedIndices.length; j++) {
                         const index = trackedIndices[j];
                         const trait = traits[index];
@@ -92,11 +86,9 @@ export function createQueryResult<T extends QueryParameter[]>(
                             changed = ctx.fastSetWithChangeDetection(eid, store, newValue);
                         }
 
-                        // Collect changed traits.
                         if (changed) changedPairs.push([entity, trait] as const);
                     }
 
-                    // Commit all changes back to the stores for untracked traits.
                     for (let j = 0; j < untrackedIndices.length; j++) {
                         const index = untrackedIndices[j];
                         const trait = traits[index];
@@ -117,15 +109,13 @@ export function createQueryResult<T extends QueryParameter[]>(
 
                 for (let i = 0; i < entities.length; i++) {
                     const entity = entities[i];
-                    const eid = getEntityId(entity);
+                    const eid = entity & ENTITY_ID_MASK;
 
                     createSnapshotsWithAtomic(eid, traits, stores, state, atomicSnapshots);
                     callback(state as unknown as InstancesFromParameters<T>, entity, i);
 
-                    // Skip if the entity has been destroyed.
                     if (!world.has(entity)) continue;
 
-                    // Commit all changes back to the stores.
                     for (let j = 0; j < traits.length; j++) {
                         const trait = traits[j];
                         const ctx = trait[$internal];
@@ -141,7 +131,6 @@ export function createQueryResult<T extends QueryParameter[]>(
                             changed = ctx.fastSetWithChangeDetection(eid, stores[j], newValue);
                         }
 
-                        // Collect changed traits.
                         if (changed) changedPairs.push([entity, trait] as const);
                     }
                 }
@@ -154,14 +143,12 @@ export function createQueryResult<T extends QueryParameter[]>(
             } else if (options.changeDetection === 'never') {
                 for (let i = 0; i < entities.length; i++) {
                     const entity = entities[i];
-                    const eid = getEntityId(entity);
+                    const eid = entity & ENTITY_ID_MASK;
                     createSnapshots(eid, traits, stores, state);
                     callback(state as unknown as InstancesFromParameters<T>, entity, i);
 
-                    // Skip if the entity has been destroyed.
                     if (!world.has(entity)) continue;
 
-                    // Commit all changes back to the stores.
                     for (let j = 0; j < traits.length; j++) {
                         const trait = traits[j];
                         const ctx = trait[$internal];
@@ -186,7 +173,7 @@ export function createQueryResult<T extends QueryParameter[]>(
         },
 
         sort(
-            callback: (a: Entity, b: Entity) => number = (a, b) => getEntityId(a) - getEntityId(b)
+            callback: (a: Entity, b: Entity) => number = (a, b) => (a & ENTITY_ID_MASK) - (b & ENTITY_ID_MASK)
         ): QueryResult<T> {
             Array.prototype.sort.call(entities, callback);
             return results;
@@ -335,7 +322,7 @@ export function createRelationOnlyQueryResult<T extends QueryParameter[]>(
         useStores: relationOnlyMethods.useStores,
         select: relationOnlyMethods.select,
         sort(
-            callback: (a: Entity, b: Entity) => number = (a, b) => getEntityId(a) - getEntityId(b)
+            callback: (a: Entity, b: Entity) => number = (a, b) => (a & ENTITY_ID_MASK) - (b & ENTITY_ID_MASK)
         ): QueryResult<T> {
             Array.prototype.sort.call(entities, callback);
             return results;
