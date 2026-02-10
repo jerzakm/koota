@@ -9,7 +9,7 @@ import type {
     TraitInstance,
     TraitRecord,
 } from '../trait/types';
-import type { SparseSet } from '../utils/sparse-set';
+import type { QueryEntitySet } from '../utils/query-entity-set';
 import type { World } from '../world';
 import { $modifier } from './modifier';
 import { $parameters, $queryRef } from './symbols';
@@ -156,11 +156,11 @@ export type QueryInstance<T extends QueryParameter[] = QueryParameter[]> = {
     /** Unified tracking groups with explicit AND/OR logic */
     trackingGroups: TrackingGroup[];
     generations: number[];
-    entities: SparseSet;
+    entities: QueryEntitySet;
     isTracking: boolean;
     hasChangedModifiers: boolean;
     changedTraits: Set<Trait>;
-    toRemove: SparseSet;
+    toRemove: QueryEntitySet;
     addSubscriptions: Set<QuerySubscriber>;
     removeSubscriptions: Set<QuerySubscriber>;
     /** Relation pairs for target-specific queries */

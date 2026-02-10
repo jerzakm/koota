@@ -7,7 +7,7 @@ import { registerTrait, trait } from '../trait/trait';
 import { getTraitInstance, hasTraitInstance } from '../trait/trait-instance';
 import type { TagTrait, Trait } from '../trait/types';
 import { universe } from '../universe/universe';
-import { SparseSet } from '../utils/sparse-set';
+import { QueryEntitySet } from '../utils/query-entity-set';
 import type { World } from '../world';
 import { getTrackingType, isModifier, isOrWithModifiers, isTrackingModifier } from './modifier';
 import { createQueryResult } from './query-result';
@@ -186,11 +186,11 @@ export function createQueryInstance<T extends QueryParameter[]>(
         staticBitmasks: [],
         trackingGroups: [],
         generations: [],
-        entities: new SparseSet(),
+        entities: new QueryEntitySet(),
         isTracking: false,
         hasChangedModifiers: false,
         changedTraits: new Set<Trait>(),
-        toRemove: new SparseSet(),
+        toRemove: new QueryEntitySet(),
         addSubscriptions: new Set<QuerySubscriber>(),
         removeSubscriptions: new Set<QuerySubscriber>(),
         relationFilters: [],

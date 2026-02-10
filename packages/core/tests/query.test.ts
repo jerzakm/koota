@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { $internal, createQuery, createWorld, IsExcluded, Not, Or, trait } from '../src';
+import { $internal, createQuery, createWorld, IsExcluded, Not, Or, trait, type Entity } from '../src';
 
 const Position = trait({ x: 0, y: 0 });
 const Name = trait({ name: 'name' });
@@ -463,6 +463,74 @@ describe('Query', () => {
         for (let i = 0; i < entities.length; i++) {
             expect(entities[i].id()).toBe(i + 1);
         }
+    });
+
+    it('should handle recycled entity IDs correctly in queries', () => {
+        const Health = trait({ current: 0, max: 100 });
+
+        const q = world.query(Position, Health);
+        expect(q.length).toBe(0);
+
+        const entityA = world.spawn(Position, Health);
+        const entityB = world.spawn(Position, Health);
+        const entityC = world.spawn(Position, Health);
+
+        expect(world.query(Position, Health).length).toBe(3);
+
+        entityA.destroy();
+        entityB.destroy();
+
+        expect(world.query(Position, Health).length).toBe(1);
+
+        const entityD = world.spawn(Position);
+        const entityE = world.spawn(Position);
+
+        const recycledIds = new Set([entityD.id(), entityE.id()]);
+        expect(recycledIds.size).toBe(2);
+
+        expect(world.query(Position, Health).length).toBe(1);
+        expect(world.query(Position).length).toBe(3);
+
+        entityD.add(Health({ current: 50, max: 100 }));
+        entityE.add(Health({ current: 75, max: 100 }));
+
+        const results = world.query(Position, Health);
+        expect(results.length).toBe(3);
+        expect(results).toContain(entityC);
+        expect(results).toContain(entityD);
+        expect(results).toContain(entityE);
+
+        expect(entityD.get(Health)!.current).toBe(50);
+        expect(entityE.get(Health)!.current).toBe(75);
+    });
+
+    it('should handle rapid spawn-destroy-spawn cycles with queries', () => {
+        const Health = trait({ current: 0, max: 100 });
+
+        world.query(Position, Health);
+        world.query(Position, Not(IsActive));
+
+        for (let cycle = 0; cycle < 10; cycle++) {
+            const entities: Entity[] = [];
+            for (let i = 0; i < 50; i++) {
+                entities.push(world.spawn(Position, Health));
+            }
+
+            for (let i = 0; i < 50; i += 2) {
+                entities[i].add(IsActive);
+            }
+
+            for (const e of entities) {
+                e.destroy();
+            }
+
+            expect(world.query(Position, Health).length).toBe(0);
+            expect(world.query(Position, Not(IsActive)).length).toBe(0);
+        }
+
+        const fresh = world.spawn(Position, Health);
+        expect(world.query(Position, Health).length).toBe(1);
+        expect(world.query(Position, Health)[0]).toBe(fresh);
     });
 
     it('cached query should return values after reset', () => {
