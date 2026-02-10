@@ -10,6 +10,7 @@ export /* @inline */ function incrementWorldBitflag(world: World) {
 
     if (ctx.bitflag >= 2 ** 31) {
         ctx.bitflag = 1;
-        ctx.entityMasks.push([]);
+        const prevLen = ctx.entityMasks[ctx.entityMasks.length - 1].length;
+        ctx.entityMasks.push(new Uint32Array(prevLen));
     }
 }

@@ -319,15 +319,15 @@ function updateQueriesForRelationChange(
 
     // Update queries indexed by this relation (much faster than iterating all queries)
     // All queries in relationQueries already filter by this relation
-    for (const query of traitData.relationQueries) {
-        // Re-check entity against query
-        const match = checkQueryWithRelations(world, query, entity);
-        if (match) {
-            query.add(entity);
-        } else {
-            query.remove(world, entity);
-        }
-    }
+	for (let i = 0, len = traitData.relationQueries.length; i < len; i++) {
+		const query = traitData.relationQueries[i];
+		const match = checkQueryWithRelations(world, query, entity);
+		if (match) {
+			query.add(entity);
+		} else {
+			query.remove(world, entity);
+		}
+	}
 }
 
 /** Swap-and-pop data arrays for non-exclusive relations */

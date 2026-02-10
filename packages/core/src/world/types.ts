@@ -27,7 +27,7 @@ export type WorldOptions = {
 
 export type WorldInternal = {
     entityIndex: ReturnType<typeof createEntityIndex>;
-    entityMasks: number[][];
+    entityMasks: Uint32Array[];
     entityTraits: Map<number, Set<Trait>>;
     bitflag: number;
     traitInstances: (TraitInstance | undefined)[];
@@ -35,7 +35,7 @@ export type WorldInternal = {
     queriesHashMap: Map<string, QueryInstance>;
     queryInstances: (QueryInstance | undefined)[];
     actionInstances: (ActionInstance | undefined)[];
-    notQueries: Set<QueryInstance>;
+	notQueries: QueryInstance[];
     dirtyQueries: Set<QueryInstance>;
     dirtyMasks: Map<number, number[][]>;
     trackingSnapshots: Map<number, number[][]>;

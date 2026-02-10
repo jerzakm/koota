@@ -36,9 +36,8 @@ export function runQuery<T extends QueryParameter[]>(
 ): QueryResult<T> {
     commitQueryRemovals(world);
 
-    // With hybrid bitmask strategy, query.entities is already incrementally maintained
-    // with both trait and relation filters applied. Just return the pre-filtered entities.
-    const entities = query.entities.dense.slice() as Entity[];
+	// query.entities.dense already returns a fresh copy, no need for extra .slice()
+	const entities = query.entities.dense as Entity[];
 
     // Clear so it can accumulate again.
     if (query.isTracking) {
@@ -85,13 +84,14 @@ export function commitQueryRemovals(world: World) {
     const ctx = world[$internal];
     if (!ctx.dirtyQueries.size) return;
 
-    for (const query of ctx.dirtyQueries) {
-        for (let i = query.toRemove.dense.length - 1; i >= 0; i--) {
-            const eid = query.toRemove.dense[i];
-            query.toRemove.remove(eid);
-            query.entities.remove(eid);
-        }
-    }
+	for (const query of ctx.dirtyQueries) {
+		const toRemoveDense = query.toRemove.dense;
+		for (let i = toRemoveDense.length - 1; i >= 0; i--) {
+			const eid = toRemoveDense[i];
+			query.toRemove.remove(eid);
+			query.entities.remove(eid);
+		}
+	}
 
     ctx.dirtyQueries.clear();
 }
@@ -315,19 +315,19 @@ export function createQueryInstance<T extends QueryParameter[]>(
     // Add to world
     ctx.queriesHashMap.set(query.hash, query);
 
-    // Register query with trait instances
-    if (query.isTracking) {
-        query.traitInstances.all.forEach((instance) => {
-            instance.trackingQueries.add(query);
-        });
-    } else {
-        query.traitInstances.all.forEach((instance) => {
-            instance.queries.add(query);
-        });
-    }
+	// Register query with trait instances
+	if (query.isTracking) {
+		for (let i = 0; i < query.traitInstances.all.length; i++) {
+			query.traitInstances.all[i].trackingQueries.push(query);
+		}
+	} else {
+		for (let i = 0; i < query.traitInstances.all.length; i++) {
+			query.traitInstances.all[i].queries.push(query);
+		}
+	}
 
     // Add to notQueries if has forbidden traits
-    if (query.traitInstances.forbidden.length > 0) ctx.notQueries.add(query);
+	if (query.traitInstances.forbidden.length > 0) ctx.notQueries.push(query);
 
     // Index queries with relation filters
     const hasRelationFilters = query.relationFilters && query.relationFilters.length > 0;
@@ -337,7 +337,7 @@ export function createQueryInstance<T extends QueryParameter[]>(
             const relationTrait = pair[$internal].relation[$internal].trait;
             const relationTraitInstance = getTraitInstance(ctx.traitInstances, relationTrait);
             if (relationTraitInstance) {
-                relationTraitInstance.relationQueries.add(query);
+			relationTraitInstance.relationQueries.push(query);
             }
         }
     }

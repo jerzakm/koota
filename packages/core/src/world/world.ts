@@ -38,7 +38,7 @@ export function createWorld(
     const world = {
         [$internal]: {
             entityIndex: createEntityIndex(id),
-            entityMasks: [[]],
+            entityMasks: [new Uint32Array(1024)],
             entityTraits: new Map(),
             bitflag: 1,
             traitInstances: [],
@@ -46,7 +46,7 @@ export function createWorld(
             queriesHashMap: new Map(),
             queryInstances: [],
             actionInstances: [],
-            notQueries: new Set(),
+			notQueries: [],
             dirtyQueries: new Set(),
             dirtyMasks: new Map(),
             trackingSnapshots: new Map(),
@@ -137,7 +137,7 @@ export function createWorld(
 
             ctx.entityIndex = createEntityIndex(id);
             ctx.entityTraits.clear();
-            ctx.entityMasks = [[]];
+            ctx.entityMasks = [new Uint32Array(1024)];
             ctx.bitflag = 1;
 
             clearTraitInstance(ctx.traitInstances);
@@ -148,7 +148,7 @@ export function createWorld(
             ctx.queryInstances.length = 0;
             ctx.actionInstances.length = 0;
             ctx.dirtyQueries.clear();
-            ctx.notQueries.clear();
+			ctx.notQueries.length = 0;
 
             ctx.trackingSnapshots.clear();
             ctx.dirtyMasks.clear();

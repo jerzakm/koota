@@ -15,12 +15,12 @@ export function createEntity(world: World, ...traits: ConfigurableTrait[]): Enti
     const ctx = world[$internal];
     const entity = allocateEntity(ctx.entityIndex);
 
-    for (const query of ctx.notQueries) {
-        const match = query.check(world, entity);
-        if (match) query.add(entity);
-        // Reset all tracking bitmasks for the query.
-        query.resetTrackingBitmasks(getEntityId(entity));
-    }
+	for (let i = 0, len = ctx.notQueries.length; i < len; i++) {
+		const query = ctx.notQueries[i];
+		const match = query.check(world, entity);
+		if (match) query.add(entity);
+		query.resetTrackingBitmasks(getEntityId(entity));
+	}
 
     ctx.entityTraits.set(entity, new Set());
     addTrait(world, entity, ...traits);

@@ -33,6 +33,8 @@ import {
     validateSchema,
 } from '../storage';
 import type { World } from '../world';
+import { BitSet } from '../utils/bit-set';
+import { ensureEntityMaskSize } from '../world/utils/ensure-entity-mask-size';
 import { incrementWorldBitflag } from '../world/utils/increment-world-bit-flag';
 import { getTraitInstance, hasTraitInstance, setTraitInstance } from './trait-instance';
 import type {
@@ -100,11 +102,12 @@ export function registerTrait(world: World, trait: Trait) {
         bitflag: ctx.bitflag,
         trait,
         store: traitCtx.createStore(),
-        queries: new Set(),
-        trackingQueries: new Set(),
-        notQueries: new Set(),
-        relationQueries: new Set(),
+		queries: [],
+		trackingQueries: [],
+		notQueries: [],
+		relationQueries: [],
         schema: trait.schema,
+        entityBitSet: new BitSet(),
         changeSubscriptions: new Set(),
         addSubscriptions: new Set(),
         removeSubscriptions: new Set(),
@@ -453,7 +456,9 @@ export function getTrait(world: World, entity: Entity, trait: Trait | RelationPa
 
     // Add bitflag to entity bitmask
     const eid = getEntityId(entity);
+    ensureEntityMaskSize(ctx.entityMasks, generationId, eid);
     ctx.entityMasks[generationId][eid] |= bitflag;
+    instance.entityBitSet.add(eid);
 
     // Set the entity as dirty
     for (const dirtyMask of ctx.dirtyMasks.values()) {
@@ -461,29 +466,33 @@ export function getTrait(world: World, entity: Entity, trait: Trait | RelationPa
         dirtyMask[generationId][eid] |= bitflag;
     }
 
-    // Update non-tracking queries (no event data needed)
-    for (const query of queries) {
-        query.toRemove.remove(entity);
-        // Use checkQueryWithRelations if query has relation filters, otherwise use checkQuery
-        const match =
-            query.relationFilters && query.relationFilters.length > 0
-                ? checkQueryWithRelations(world, query, entity)
-                : query.check(world, entity);
-        if (match) query.add(entity);
-        else query.remove(world, entity);
-    }
+	// Update non-tracking queries (no event data needed)
+	// PERF: Use indexed loop instead of for...of to avoid iterator overhead
+	for (let qi = 0, qLen = queries.length; qi < qLen; qi++) {
+		const query = queries[qi];
+		query.toRemove.remove(entity);
+		// Use checkQueryWithRelations if query has relation filters, otherwise use checkQuery
+		const match =
+			query.relationFilters && query.relationFilters.length > 0
+				? checkQueryWithRelations(world, query, entity)
+				: query.check(world, entity);
+		if (match) query.add(entity);
+		else query.remove(world, entity);
+	}
 
-    // Update tracking queries (with event data)
-    for (const query of trackingQueries) {
-        query.toRemove.remove(entity);
-        // Use checkQueryTrackingWithRelations if query has relation filters, otherwise use checkQueryTracking
-        const match =
-            query.relationFilters && query.relationFilters.length > 0
-                ? checkQueryTrackingWithRelations(world, query, entity, 'add', generationId, bitflag)
-                : query.checkTracking(world, entity, 'add', generationId, bitflag);
-        if (match) query.add(entity);
-        else query.remove(world, entity);
-    }
+	// Update tracking queries (with event data)
+	// PERF: Use indexed loop instead of for...of to avoid iterator overhead
+	for (let qi = 0, qLen = trackingQueries.length; qi < qLen; qi++) {
+		const query = trackingQueries[qi];
+		query.toRemove.remove(entity);
+		// Use checkQueryTrackingWithRelations if query has relation filters, otherwise use checkQueryTracking
+		const match =
+			query.relationFilters && query.relationFilters.length > 0
+				? checkQueryTrackingWithRelations(world, query, entity, 'add', generationId, bitflag)
+				: query.checkTracking(world, entity, 'add', generationId, bitflag);
+		if (match) query.add(entity);
+		else query.remove(world, entity);
+	}
 
     // Add trait to entity internally
     ctx.entityTraits.get(entity)!.add(trait);
@@ -510,40 +519,41 @@ function removeTraitFromEntity(world: World, entity: Entity, trait: Trait): void
     // Remove bitflag from entity bitmask
     const eid = getEntityId(entity);
     ctx.entityMasks[generationId][eid] &= ~bitflag;
+    instance.entityBitSet.remove(eid);
 
     // Set the entity as dirty
     for (const dirtyMask of ctx.dirtyMasks.values()) {
         dirtyMask[generationId][eid] |= bitflag;
     }
 
-    // Update non-tracking queries
-    for (const query of queries) {
-        // Use checkQueryWithRelations if query has relation filters, otherwise use checkQuery
-        const match =
-            query.relationFilters && query.relationFilters.length > 0
-                ? checkQueryWithRelations(world, query, entity)
-                : query.check(world, entity);
-        if (match) query.add(entity);
-        else query.remove(world, entity);
-    }
+	// Update non-tracking queries
+	for (let qi = 0, qLen = queries.length; qi < qLen; qi++) {
+		const query = queries[qi];
+		const match =
+			query.relationFilters && query.relationFilters.length > 0
+				? checkQueryWithRelations(world, query, entity)
+				: query.check(world, entity);
+		if (match) query.add(entity);
+		else query.remove(world, entity);
+	}
 
-    // Update tracking queries (with event data)
-    for (const query of trackingQueries) {
-        // Use checkQueryTrackingWithRelations if query has relation filters, otherwise use checkQueryTracking
-        const match =
-            query.relationFilters && query.relationFilters.length > 0
-                ? checkQueryTrackingWithRelations(
-                      world,
-                      query,
-                      entity,
-                      'remove',
-                      generationId,
-                      bitflag
-                  )
-                : query.checkTracking(world, entity, 'remove', generationId, bitflag);
-        if (match) query.add(entity);
-        else query.remove(world, entity);
-    }
+	// Update tracking queries (with event data)
+	for (let qi = 0, qLen = trackingQueries.length; qi < qLen; qi++) {
+		const query = trackingQueries[qi];
+		const match =
+			query.relationFilters && query.relationFilters.length > 0
+				? checkQueryTrackingWithRelations(
+						world,
+						query,
+						entity,
+						'remove',
+						generationId,
+						bitflag
+					)
+				: query.checkTracking(world, entity, 'remove', generationId, bitflag);
+		if (match) query.add(entity);
+		else query.remove(world, entity);
+	}
 
     // Remove trait from entity internally
     ctx.entityTraits.get(entity)!.delete(trait);

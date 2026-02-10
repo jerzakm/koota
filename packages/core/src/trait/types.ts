@@ -3,6 +3,7 @@ import type { Entity } from '../entity/types';
 import type { QueryInstance } from '../query/types';
 import type { Relation, RelationPair } from '../relation/types';
 import type { AoSFactory, Schema, Store, StoreType } from '../storage';
+import type { BitSet } from '../utils/bit-set';
 
 // Backwards-compatible alias (the trait "type" is the storage layout).
 export type TraitType = StoreType;
@@ -87,13 +88,12 @@ export interface TraitInstance<T extends Trait = Trait, S extends Schema = Extra
     trait: Trait;
     store: Store<S>;
     /** Non-tracking queries that include this trait */
-    queries: Set<QueryInstance>;
-    /** Tracking queries (Added/Removed/Changed) that include this trait */
-    trackingQueries: Set<QueryInstance>;
-    notQueries: Set<QueryInstance>;
-    /** Queries that filter by this relation (only for relation traits) */
-    relationQueries: Set<QueryInstance>;
+	queries: QueryInstance[];
+	trackingQueries: QueryInstance[];
+	notQueries: QueryInstance[];
+	relationQueries: QueryInstance[];
     schema: S;
+    entityBitSet: BitSet;
     changeSubscriptions: Set<(entity: Entity, target?: Entity) => void>;
     addSubscriptions: Set<(entity: Entity, target?: Entity) => void>;
     removeSubscriptions: Set<(entity: Entity, target?: Entity) => void>;

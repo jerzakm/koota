@@ -17,7 +17,7 @@ export function getTrackingCursor() {
 
 export function setTrackingMasks(world: World, id: number) {
     const ctx = world[$internal];
-    const snapshot = structuredClone(ctx.entityMasks);
+    const snapshot = ctx.entityMasks.map((mask) => Array.from(mask)) as number[][];
     ctx.trackingSnapshots.set(id, snapshot);
 
     // For dirty and changed masks, make clone of entity masks and set all bits to 0.
