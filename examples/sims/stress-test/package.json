@@ -1,0 +1,14 @@
+{
+	"name": "@sim/stress-test",
+	"private": true,
+	"version": "0.0.1",
+	"description": "Comprehensive ECS stress test targeting BitSet, TraitData[], Query[], and micro-optimizations",
+	"type": "module",
+	"main": "./src/index.ts",
+	"dependencies": {
+		"koota": "workspace:*"
+	},
+	"devDependencies": {
+		"@config/typescript": "workspace:*"
+	}
+}

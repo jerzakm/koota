@@ -1,4 +1,4 @@
-const NBODIES = 2000; // Number of entities
+const NBODIES = 10000; // Number of entities
 const BASE_MASS = 0.1; // Base mass
 const VAR_MASS = 0.8; // Amount of randomness added to mass
 const INITIAL_C = 12000; // Mass used in calculation of orbital speed

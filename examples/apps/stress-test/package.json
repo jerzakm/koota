@@ -1,0 +1,19 @@
+{
+  "name": "@app/stress-test",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "koota": "workspace:*",
+    "@sim/stress-test": "workspace:*"
+  },
+  "devDependencies": {
+    "@config/typescript": "workspace:*",
+    "vite": "catalog:"
+  }
+}
